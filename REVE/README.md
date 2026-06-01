@@ -1,5 +1,9 @@
 # REVE for EEG Seizure Detection
 
+<p align="center">
+  <img src="images/reve_pipeline.png" width="800">
+</p>
+
 ## Overview
 
 This project investigates whether REVE (Representation for EEG with Versatile Embeddings), a pretrained EEG foundation model, contains transferable seizure-related information.
