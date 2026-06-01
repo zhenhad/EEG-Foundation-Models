@@ -35,3 +35,30 @@ EEG-Foundation-Models/
 ├── requirements.txt
 ├── .gitignore
 └── README.md
+```
+## Project Overview
+
+
+EEG recordings are highly heterogeneous across subjects, devices, sampling rates, and electrode montages. This makes generalization difficult for traditional task-specific EEG models.
+
+This project explores whether pretrained EEG foundation models can transfer to a clinically relevant downstream task: seizure detection.
+
+For the REVE experiment, I used the CHB-MIT scalp EEG dataset, converted continuous EDF recordings into labeled EEG windows, and trained a linear classifier on top of a frozen pretrained REVE backbone.
+
+## Current Status
+
+- REVE pipeline implemented
+- CHB-MIT preprocessing completed
+- Linear probing experiments completed
+- Class imbalance handling added
+- Test-time prediction export added
+- Event-level evaluation added
+- Gradient-based channel importance analysis added
+
+## Author
+
+Zhenous Hadi Jafari
+PhD Student, Biomedical Engineering
+University of Texas at Arlington
+- GitHub: [zhenhad](https://github.com/zhenhad)
+- LinkedIn: [Zhenous (Zee) Hadi Jafari](https://www.linkedin.com/in/zhenous-hadi-jafari-b086b36a/)
