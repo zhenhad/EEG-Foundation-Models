@@ -1,3 +1,37 @@
+"""
+make_chbmit_windows.py
+
+Generate window-level seizure classification samples from the
+CHB-MIT Scalp EEG Database.
+
+This script:
+
+1. Parses seizure annotations from subject summary files.
+2. Reads EDF metadata.
+3. Creates fixed-length EEG windows.
+4. Computes seizure overlap for each window.
+5. Assigns binary seizure/non-seizure labels.
+6. Exports a CSV file used for REVE training.
+
+Dataset:
+    CHB-MIT Scalp EEG Database
+    https://physionet.org/content/chbmit/1.0.0/
+
+Project:
+    EEG Foundation Models for Seizure Detection
+
+Author:
+    Zhenous Hadi Jafari
+    zhenous.hadijafari@uta.edu
+    PhD Student, Bioengineering
+    University of Texas at Arlington
+
+Output:
+    windows_chbmit_all_4s_50ol.csv
+"""
+# This script was used to generate the training dataset
+# reported in the REVE seizure detection experiments.
+
 import re
 from pathlib import Path
 import pandas as pd
@@ -8,6 +42,10 @@ ROOT = Path(r"A:\UTA\Dr. Papadelis\Dr.P\Foundation Models\REVE\chbmit")
 # Automatically detect subject folders like chb01, chb02, ..., chb24
 SUBJECTS = sorted([p.name for p in ROOT.glob("chb*") if p.is_dir()])
 
+# Window configuration
+# 4-second windows
+# 50% overlap
+# Effective stride = 2 seconds
 WIN_SEC = 4.0
 OVERLAP = 0.5
 STEP_SEC = WIN_SEC * (1 - OVERLAP)   # 2 seconds
