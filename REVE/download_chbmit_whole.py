@@ -1,3 +1,34 @@
+"""
+download_chbmit_whole.py
+
+Utility script for downloading the complete CHB-MIT Scalp EEG Database
+from PhysioNet and organizing recordings by subject.
+
+Dataset:
+    CHB-MIT Scalp EEG Database
+    https://physionet.org/content/chbmit/1.0.0/
+
+Author:
+    Zhenous Hadi Jafari
+    zhenous.hadijafari@uta.edu
+    PhD Student, Bioengineering
+    University of Texas at Arlington
+
+Project:
+    EEG Foundation Models for Seizure Detection
+    REVE-based seizure classification on CHB-MIT EEG recordings
+
+Description:
+    This script automatically:
+    1. Retrieves all subject folders from PhysioNet.
+    2. Downloads EDF recordings and annotation files.
+    3. Organizes files into subject-specific directories.
+    4. Skips files already downloaded.
+
+Usage:
+    python download_chbmit_whole.py
+"""
+
 import os
 import urllib.request
 import re
