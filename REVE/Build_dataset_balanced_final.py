@@ -1,3 +1,37 @@
+"""
+Build_dataset_balanced_final.py
+
+Dataset construction pipeline for REVE-based seizure detection
+using the CHB-MIT Scalp EEG Database.
+
+Pipeline:
+    1. EDF validation and channel harmonization
+    2. Bipolar channel selection
+    3. Bandpass filtering (0.5–40 Hz)
+    4. Window extraction (4 s, 50% overlap)
+    5. Subject-wise train/validation/test split
+    6. Negative window downsampling
+    7. Seizure window augmentation
+    8. Weighted batch sampling
+    9. PyTorch Dataset/DataLoader generation
+
+Dataset:
+    CHB-MIT Scalp EEG Database
+    https://physionet.org/content/chbmit/1.0.0/
+
+Project:
+    EEG Foundation Models for Seizure Detection
+
+Model:
+    REVE (Representation Learning for EEG)
+
+Author:
+    Zhenous Hadi Jafari
+    zhenous.hadijafari@uta.edu
+    PhD Student, Bioengineering
+    University of Texas at Arlington
+"""
+
 from pathlib import Path
 import pandas as pd
 import numpy as np
@@ -23,6 +57,27 @@ WINDOW_LEN_SEC = 4.0
 USE_WEIGHTED_SAMPLER = True
 MIN_USABLE_BIPOLAR_PAIRS = 5
 
+# ==========================================================
+# DATA PIPELINE
+#
+# EDF
+#  -> channel validation
+#  -> 0.5–40 Hz filtering
+#  -> channel harmonization
+#  -> 4-second windows
+#  -> subject-wise split
+#  -> class balancing
+#  -> seizure augmentation
+#  -> weighted sampling
+#  -> DataLoader
+#
+# Final tensor:
+#     (channels=22, samples=1024)
+# ==========================================================
+
+# ==========================================================
+# CHANNEL PROCESSING
+# ==========================================================
 # Canonical CHB-MIT bipolar montage we want to keep
 VALID_BIPOLAR_CHANNELS = [
     "FP1-F7", "F7-T7", "T7-P7", "P7-O1",
@@ -90,7 +145,9 @@ def filter_bad_edfs(df: pd.DataFrame, min_channels: int = 5) -> pd.DataFrame:
     print(f"[FILTER] Remaining windows after EDF filtering: {len(df_filtered):,}")
     return df_filtered.reset_index(drop=True)
 
-
+# ==========================================================
+# DATASET CLASS
+# ==========================================================
 class CHBMITWindowDataset(torch.utils.data.Dataset):
     def __init__(self, df: pd.DataFrame, global_ch_names, target_sfreq=256.0, zscore=True):
         self.df = df.reset_index(drop=True)
@@ -107,16 +164,35 @@ class CHBMITWindowDataset(torch.utils.data.Dataset):
         if edf_path in self._edf_cache:
             return self._edf_cache[edf_path]
 
-        raw = mne.io.read_raw_edf(edf_path, preload=True, verbose="ERROR")
+        raw = mne.io.read_raw_edf(
+            edf_path, 
+            preload=True, 
+            verbose="ERROR"
+            )
+# -----------------------------
+# Bandpass filter (0.5_40.0 Hz)
+# -----------------------------
+        raw.filter(
+            l_freq=0.5,
+            h_freq=40.0,
+            method="fir",
+            fir_design="firwin",
+            verbose=False
+        )
+
         orig_sfreq = float(raw.info["sfreq"])
 
         kept_names, raw_idx = get_valid_channel_mapping(raw.ch_names)
         if len(kept_names) == 0:
-            raise RuntimeError(f"No valid bipolar EEG channels found in {edf_path}")
+            raise RuntimeError(
+                f"No valid bipolar EEG channels found in {edf_path}"
+            )
 
-        data = raw.get_data(picks=raw_idx).astype(np.float32)
+        data = raw.get_data(
+            picks=raw_idx
+        ).astype(np.float32)
 
-        if orig_sfreq != self.target_sfreq:
+        if abs(orig_sfreq - self.target_sfreq) > 1e-3:
             data = mne.filter.resample(
                 data,
                 up=self.target_sfreq,
@@ -127,7 +203,11 @@ class CHBMITWindowDataset(torch.utils.data.Dataset):
             )
 
         sfreq = self.target_sfreq
-        self._edf_cache[edf_path] = (data, kept_names, sfreq)
+        self._edf_cache[edf_path] = (
+            data, 
+            kept_names, 
+            sfreq
+        )
         return self._edf_cache[edf_path]
 
     def __getitem__(self, idx):
@@ -176,7 +256,9 @@ def build_global_channel_list(df):
 
     return [ch for ch in VALID_BIPOLAR_CHANNELS if ch in present]
 
-
+# ==========================================================
+# TRAIN / VAL / TEST SPLIT
+# ==========================================================
 def subject_edf_split(df, test_subject="chb03", val_fraction=0.1, seed=42):
     test_df = df[df["subject"] == test_subject].copy()
     train_pool = df[df["subject"] != test_subject].copy()
@@ -200,7 +282,9 @@ def summarize_labels(df: pd.DataFrame, name: str):
     ratio = (n_neg / n_pos) if n_pos > 0 else float("inf")
     print(f"[{name}] total={len(df):,} | non-seizure={n_neg:,} | seizure={n_pos:,} | neg:pos={ratio:.2f}:1")
 
-
+#=======================================
+# Balancing Utilities
+#=======================================
 def downsample_negatives(train_df: pd.DataFrame, neg_pos_ratio: int = 4, seed: int = 42) -> pd.DataFrame:
     seizure_df = train_df[train_df["label"] == 1].copy()
     non_seizure_df = train_df[train_df["label"] == 0].copy()
